@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Node.js
@@ -26,28 +26,31 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: 'platforms;android-34 build-tools;34.0.0 platform-tools'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
 
       - name: Install npm dependencies
         run: npm install
 
-      - name: Add Android platform
-        run: npx cap add android
-
-      - name: Inject custom Android files
+      - name: Sync web assets into android assets/public
         run: |
-          mkdir -p android/app/src/main/java/com/shottimer/app
-          cp android-snippets/MicAudioPlugin.kt android/app/src/main/java/com/shottimer/app/MicAudioPlugin.kt
-          cp android-snippets/MainActivity.java android/app/src/main/java/com/shottimer/app/MainActivity.java
-          cp android-snippets/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
+          rm -rf android/app/src/main/assets/public
+          mkdir -p android/app/src/main/assets/public
+          cp -r www/. android/app/src/main/assets/public/
+          cp capacitor.config.json android/app/src/main/assets/capacitor.config.json
 
-      - name: Capacitor sync
-        run: npx cap sync android
+      - name: Generate gradle wrapper jar
+        working-directory: android
+        run: |
+          gradle wrapper --gradle-version 8.2.1 --distribution-type bin
+          chmod +x gradlew
 
       - name: Build debug APK
-        run: |
-          cd android
-          chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

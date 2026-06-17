@@ -1,108 +1,63 @@
-# Shot Timer — بناء APK أندرويد
+# Shot Timer — البناء
 
-## المتطلبات
+مشروع Capacitor كامل لتطبيق Shot Timer بنظام أندرويد. هيكل مجلد `android/` مُولّد بالكامل وجاهز للبناء بدون الحاجة لتشغيل `npx cap add android`.
 
-- Node.js 18+ و npm
-- JDK 17 (Capacitor 6 يتطلب Java 17)
-- Android Studio (لتثبيت Android SDK + Build Tools + Platform 34)
-- جهاز أندرويد بنظام 7.0+ (API 24+ لدعم `UNPROCESSED` audio source)
+## البناء التلقائي عبر GitHub Actions (الموصى به)
 
-## الخطوات
+ادفع هذا المستودع لـ GitHub، ثم:
 
-### 1) تثبيت الاعتماديات
+- ادخل تاب **Actions** → اختر workflow **Build Shot Timer APK** → اضغط **Run workflow**.
+- بعد 5-8 دقايق سيظهر artifact باسم `shot-timer-debug-apk` في أسفل الـ run.
+- نزّل ZIP الـ artifact → فك الضغط → `app-debug.apk` جاهز.
+
+الـ workflow يقوم بـ:
+- تنزيل JDK 17 + Android SDK + Gradle.
+- `npm install` لجلب `@capacitor/android` (مطلوب لـ `settings.gradle`).
+- نسخ `www/` إلى `android/app/src/main/assets/public/`.
+- توليد `gradle-wrapper.jar` (الملف الثنائي الوحيد غير المُلتزَم به).
+- `./gradlew assembleDebug`.
+- رفع الـ APK كـ artifact.
+
+## البناء المحلي
+
+المتطلبات:
+- JDK 17
+- Android SDK (API 34) — يأتي مع Android Studio
+- Gradle 8.2.1 محلياً (لتوليد الـ wrapper jar أول مرة)
+- Node.js + npm
+
+الخطوات:
 
 ```bash
 cd shot-timer-android
 npm install
-```
 
-### 2) تهيئة منصة أندرويد
+cp -r www/. android/app/src/main/assets/public/
 
-```bash
-npx cap add android
-```
-
-سيتم إنشاء مجلد `android/` بالكامل.
-
-### 3) نسخ ملفات الـ Plugin والإعدادات
-
-من مجلد `android-snippets/` انسخ كالتالي:
-
-| المصدر | الوجهة |
-|---|---|
-| `MicAudioPlugin.kt` | `android/app/src/main/java/com/shottimer/app/MicAudioPlugin.kt` |
-| `MainActivity.java` | `android/app/src/main/java/com/shottimer/app/MainActivity.java` (يستبدل القائم) |
-| `AndroidManifest.xml` | `android/app/src/main/AndroidManifest.xml` (يستبدل القائم) |
-
-ملاحظة: إذا كان مسار الـ package مختلف بعد `cap add android`، عدّل أول سطر `package` في الملفات .kt و .java ليطابق المسار الفعلي.
-
-### 4) مزامنة الـ web assets مع المشروع الأندرويد
-
-```bash
-npx cap sync android
-```
-
-كرّر هذا الأمر بعد أي تعديل في `www/`.
-
-### 5) بناء APK تجريبي (Debug)
-
-```bash
 cd android
-.\gradlew.bat assembleDebug
+gradle wrapper --gradle-version 8.2.1
+chmod +x gradlew
+./gradlew assembleDebug
 ```
 
-الناتج:
+الناتج: `android/app/build/outputs/apk/debug/app-debug.apk`.
 
-```
-android/app/build/outputs/apk/debug/app-debug.apk
-```
+## تثبيت الـ APK
 
-### 6) (بديل) فتح في Android Studio
-
+### عبر USB (ADB)
 ```bash
-npx cap open android
+adb install -r android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-ثم Build → Build Bundle(s) / APK(s) → Build APK(s).
+### يدوياً
+1. انقل ملف الـ APK للموبايل (Telegram / Drive / USB).
+2. الإعدادات ← الأمان ← **تثبيت تطبيقات غير معروفة** ← فعّلها للبرنامج الذي ستفتح منه الـ APK.
+3. افتح الـ APK واضغط تثبيت.
+4. عند أول تشغيل، اسمح بإذن الميكروفون.
 
-## تثبيت الـ APK على الموبايل
+## ملاحظات
 
-### الطريقة 1 — عبر USB (ADB)
-
-1. فعّل **خيارات المطور** في الموبايل: الإعدادات ← حول الهاتف ← اضغط رقم البناء 7 مرات.
-2. الإعدادات ← خيارات المطور ← فعّل **USB debugging**.
-3. وصّل الموبايل بكابل USB واسمح بـ "السماح للحاسوب بـ debug" على شاشة الموبايل.
-4. شغّل:
-
-```bash
-adb install -r android\app\build\outputs\apk\debug\app-debug.apk
-```
-
-### الطريقة 2 — نقل ملف APK يدوياً
-
-1. انسخ `app-debug.apk` للموبايل (USB / Google Drive / Telegram).
-2. الإعدادات ← الأمان ← **تثبيت تطبيقات غير معروفة** ← اختر التطبيق الذي ستفتح منه الـ APK (مدير الملفات / المتصفح) ← فعّل **السماح**.
-3. افتح ملف الـ APK من مدير الملفات واضغط **تثبيت**.
-4. عند أول تشغيل سيطلب التطبيق إذن الميكروفون — اضغط **السماح**.
-
-## تشخيص المشاكل
-
-| المشكلة | الحل |
-|---|---|
-| `gradlew not found` | تأكد أنك داخل مجلد `android/` |
-| فشل البناء بسبب Java | استخدم JDK 17 (`java -version` للتأكد) |
-| التطبيق يفتح ثم يغلق | افتح Android Studio Logcat لمعرفة السبب |
-| الميكروفون لا يستجيب | تأكد من السماح يدوياً من إعدادات التطبيق |
-| الصوت مكتوم/مضغوط | تحقق أن `source` المعروض هو `UNPROCESSED` وليس `MIC` |
-
-## التحقق من مصدر الصوت
-
-في أسفل واجهة التطبيق ستظهر سطر صغير عند بدء الجلسة يوضح المصدر النشط، مثلاً:
-
-```
-audio source: UNPROCESSED · 44100 Hz
-```
-
-`UNPROCESSED` = أفضل دقة (بدون AGC/NS/AEC على مستوى النظام).
-`VOICE_RECOGNITION` = fallback مقبول (AGC/NS معطلين).
-`MIC` = آخر fallback (قد يكون فيه AGC مفعّل).
+- `applicationId` و `namespace` و package paths كلها `com.shottimer.app` ومتطابقة.
+- `MicAudioPlugin.kt` يستخدم `MediaRecorder.AudioSource.UNPROCESSED` (يتجاوز AGC/NS/AEC على مستوى OS) مع fallback لـ `VOICE_RECOGNITION` ثم `MIC`.
+- `minSdkVersion` = 26 (Android 8.0+) — مطلوب لدعم adaptive icons بدون PNGs.
+- الشاشة تظل صاحية تلقائياً وقت تشغيل المؤقت عبر `FLAG_KEEP_SCREEN_ON` من الـ plugin، وتُطفأ عند `stop()`.
