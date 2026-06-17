@@ -1,0 +1,13 @@
+{
+  "appId": "com.shottimer.app",
+  "appName": "Shot Timer",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": true
+  }
+}
