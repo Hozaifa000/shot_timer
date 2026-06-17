@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0d1117">
+<title>مؤقت الطلقة</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #f97316;
+    --accent-hover: #ea580c;
+    --success: #3fb950;
+    --warn: #d29922;
+    --danger: #f85149;
+    --mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Consolas', 'Courier New', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    overscroll-behavior: none;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Tahoma, Arial, sans-serif;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 520px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 24px 18px 28px;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  @media (min-width: 600px) {
+    body { padding: 20px; }
+    .container {
+      border-radius: 16px;
+      padding: 36px 36px 32px;
+      min-height: 0;
+    }
+  }
+
+  h1 {
+    font-size: 16px;
+    color: var(--muted);
+    text-align: center;
+    margin-bottom: 16px;
+    letter-spacing: 1px;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .mode-selector {
+    display: flex;
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 18px;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .mode-selector input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .mode-selector label {
+    flex: 1;
+    text-align: center;
+    padding: 12px 8px;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--muted);
+    transition: background 0.15s, color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  .mode-selector input[type="radio"]:checked + label {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .mode-selector.disabled label {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .timer-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 12px 0 20px;
+  }
+
+  .timer {
+    font-family: var(--mono);
+    font-size: clamp(80px, 25vw, 140px);
+    font-weight: 700;
+    text-align: center;
+    color: var(--text);
+    margin-bottom: 10px;
+    letter-spacing: -3px;
+    transition: color 0.15s;
+    direction: ltr;
+    line-height: 1;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    width: 100%;
+  }
+
+  .timer.calibrating { color: var(--warn); }
+  .timer.armed { color: var(--accent); }
+  .timer.fired { color: var(--success); }
+
+  .status {
+    text-align: center;
+    color: var(--muted);
+    font-size: 15px;
+    height: 22px;
+    transition: color 0.2s;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .status.calibrating { color: var(--warn); }
+  .status.armed { color: var(--accent); font-weight: 700; font-size: 17px; }
+  .status.success { color: var(--success); font-weight: 700; font-size: 17px; }
+
+  .controls {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+
+  button {
+    flex: 1;
+    padding: 20px 16px;
+    min-height: 64px;
+    border: none;
+    border-radius: 14px;
+    font-family: inherit;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.05s;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  button:active { transform: scale(0.97); }
+
+  .btn-start {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(249, 115, 22, 0.25);
+  }
+  .btn-start:hover { background: var(--accent-hover); }
+  .btn-start:disabled {
+    background: #30363d;
+    color: var(--muted);
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  .btn-reset {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-reset:hover { background: #1f2937; }
+
+  .history {
+    margin-top: 22px;
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+  }
+
+  .history-title {
+    font-size: 14px;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  .history-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .history-list li {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 15px;
+    padding: 12px 14px;
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    direction: ltr;
+  }
+
+  .history-list .idx { color: var(--muted); }
+  .history-list .ms { color: var(--text); font-weight: 600; }
+
+  .empty {
+    color: var(--muted) !important;
+    font-size: 13px !important;
+    text-align: center !important;
+    padding: 14px !important;
+    font-family: inherit !important;
+    direction: rtl !important;
+    border: 1px dashed var(--border) !important;
+    background: transparent !important;
+    display: block !important;
+  }
+
+  .error {
+    background: #4d1f1f;
+    color: #ffa198;
+    padding: 14px 16px;
+    border-radius: 10px;
+    font-size: 14px;
+    margin-bottom: 14px;
+    display: none;
+    line-height: 1.7;
+    border: 1px solid #6b2424;
+  }
+  .error.visible { display: block; }
+  .error strong { display: block; margin-bottom: 4px; font-size: 15px; }
+
+  .source-info {
+    text-align: center;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: var(--mono);
+    margin-top: 12px;
+    direction: ltr;
+    opacity: 0.6;
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1>مؤقت الطلقة</h1>
+
+    <div class="error" id="error"></div>
+
+    <div class="mode-selector" id="modeSelector">
+      <input type="radio" id="mode-unsup" name="mode" value="unsuppressed" checked>
+      <label for="mode-unsup">بدون كاتم</label>
+      <input type="radio" id="mode-sup" name="mode" value="suppressed">
+      <label for="mode-sup">مع كاتم</label>
+    </div>
+
+    <div class="timer-wrap">
+      <div class="timer" id="timer">0.000</div>
+      <div class="status" id="status">اختر النوع واضغط ابدأ</div>
+    </div>
+
+    <div class="controls">
+      <button class="btn-start" id="startBtn">ابدأ</button>
+      <button class="btn-reset" id="resetBtn">إعادة</button>
+    </div>
+
+    <div class="history">
+      <div class="history-title">آخر 5 نتائج</div>
+      <ul class="history-list" id="history"></ul>
+    </div>
+
+    <div class="source-info" id="sourceInfo"></div>
+  </div>
+
+<script>
+(function() {
+  const STORAGE_KEY = 'shotTimer.history';
+  const HISTORY_LIMIT = 5;
+  const CALIBRATION_MS = 1500;
+  const DEBOUNCE_MS = 300;
+  const RECENT_HISTORY_MS = 250;
+
+  const MODES = {
+    unsuppressed: {
+      label: 'بدون كاتم',
+      baselineMultiplier: 10,
+      absoluteFloor: 0.30,
+      attackWindowMs: 25,
+      attackRatio: 6,
+      requireHighFreq: false,
+      minHighFreqRatio: 0
+    },
+    suppressed: {
+      label: 'مع كاتم',
+      baselineMultiplier: 5,
+      absoluteFloor: 0.13,
+      attackWindowMs: 30,
+      attackRatio: 4,
+      requireHighFreq: true,
+      minHighFreqRatio: 0.30
+    }
+  };
+
+  const timerEl = document.getElementById('timer');
+  const statusEl = document.getElementById('status');
+  const startBtn = document.getElementById('startBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const historyEl = document.getElementById('history');
+  const errorEl = document.getElementById('error');
+  const modeSelector = document.getElementById('modeSelector');
+  const modeInputs = modeSelector.querySelectorAll('input[name="mode"]');
+  const sourceInfoEl = document.getElementById('sourceInfo');
+
+  let MicAudio = null;
+  let audioListener = null;
+
+  let phase = 'idle';
+  let currentMode = 'unsuppressed';
+  let calibrationSamples = [];
+  let calibrationStart = 0;
+  let armedStartTime = 0;
+  let recentLevels = [];
+  let lastHfRatio = 0;
+  let threshold = 0;
+  let baseline = 0;
+  let timerRafId = null;
+
+  function isNativeAvailable() {
+    return !!(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.MicAudio);
+  }
+
+  function getSelectedMode() {
+    for (const input of modeInputs) {
+      if (input.checked) return input.value;
+    }
+    return 'unsuppressed';
+  }
+
+  function setModeSelectorEnabled(enabled) {
+    modeSelector.classList.toggle('disabled', !enabled);
+    modeInputs.forEach(i => { i.disabled = !enabled; });
+  }
+
+  function setStatus(text, kind) {
+    statusEl.textContent = text;
+    statusEl.classList.remove('calibrating', 'armed', 'success');
+    if (kind) statusEl.classList.add(kind);
+  }
+
+  function setTimerStyle(kind) {
+    timerEl.classList.remove('calibrating', 'armed', 'fired');
+    if (kind) timerEl.classList.add(kind);
+  }
+
+  function getLevelAt(targetTime, history) {
+    for (let i = history.length - 1; i >= 0; i--) {
+      if (history[i].t <= targetTime) return history[i].level;
+    }
+    return null;
+  }
+
+  function isShotDetected(params) {
+    if (params.debounceElapsedMs < DEBOUNCE_MS) return false;
+    if (params.level < params.threshold) return false;
+
+    const pastLevel = getLevelAt(params.nowMs - params.attackWindowMs, params.recentLevels);
+    if (pastLevel === null) return false;
+    if (pastLevel >= params.threshold / params.attackRatio) return false;
+
+    if (params.requireHighFreq && params.highFreqRatio < params.minHighFreqRatio) return false;
+
+    return true;
+  }
+
+  function formatMs(ms) {
+    return (ms / 1000).toFixed(3);
+  }
+
+  function updateTimerDisplay() {
+    if (phase !== 'armed') return;
+    const elapsed = performance.now() - armedStartTime;
+    timerEl.textContent = formatMs(elapsed);
+    timerRafId = requestAnimationFrame(updateTimerDisplay);
+  }
+
+  function finishCalibration() {
+    if (calibrationSamples.length > 0) {
+      const sum = calibrationSamples.reduce((a, b) => a + b, 0);
+      baseline = sum / calibrationSamples.length;
+    } else {
+      baseline = 0.01;
+    }
+    const cfg = MODES[currentMode];
+    threshold = Math.max(baseline * cfg.baselineMultiplier, cfg.absoluteFloor);
+
+    phase = 'armed';
+    armedStartTime = performance.now();
+    setStatus('جاهز! أطلق الآن', 'armed');
+    setTimerStyle('armed');
+    timerEl.textContent = '0.000';
+    updateTimerDisplay();
+  }
+
+  function onAudioSample(event) {
+    const now = performance.now();
+    const level = event.rms;
+    lastHfRatio = event.hfRatio || 0;
+
+    recentLevels.push({ t: now, level });
+    while (recentLevels.length > 0 && now - recentLevels[0].t > RECENT_HISTORY_MS) {
+      recentLevels.shift();
+    }
+
+    if (phase === 'calibrating') {
+      calibrationSamples.push(level);
+      const elapsed = now - calibrationStart;
+      const remaining = Math.max(0, CALIBRATION_MS - elapsed) / 1000;
+      timerEl.textContent = remaining.toFixed(2);
+      if (elapsed >= CALIBRATION_MS) finishCalibration();
+    } else if (phase === 'armed') {
+      const cfg = MODES[currentMode];
+      const debounceElapsed = now - armedStartTime;
+
+      const detected = isShotDetected({
+        level,
+        threshold,
+        attackWindowMs: cfg.attackWindowMs,
+        attackRatio: cfg.attackRatio,
+        recentLevels,
+        nowMs: now,
+        debounceElapsedMs: debounceElapsed,
+        requireHighFreq: cfg.requireHighFreq,
+        minHighFreqRatio: cfg.minHighFreqRatio,
+        highFreqRatio: lastHfRatio
+      });
+
+      if (detected) {
+        handleShot();
+      }
+    }
+  }
+
+  async function handleShot() {
+    const reactionMs = performance.now() - armedStartTime;
+    phase = 'fired';
+    cancelAnimationFrame(timerRafId);
+    timerEl.textContent = formatMs(reactionMs);
+    setTimerStyle('fired');
+    setStatus('تم اكتشاف الطلقة', 'success');
+    startBtn.disabled = false;
+    startBtn.textContent = 'ابدأ';
+    setModeSelectorEnabled(true);
+    saveResult(reactionMs, currentMode);
+    renderHistory();
+    await stopAudio();
+  }
+
+  async function stopAudio() {
+    if (audioListener) {
+      try { await audioListener.remove(); } catch (e) {}
+      audioListener = null;
+    }
+    if (MicAudio) {
+      try { await MicAudio.stop(); } catch (e) {}
+    }
+  }
+
+  async function startSession() {
+    showError('');
+    currentMode = getSelectedMode();
+    setModeSelectorEnabled(false);
+    startBtn.disabled = true;
+    startBtn.textContent = '...جاري التحضير';
+    setStatus('جاري طلب صلاحية الميكروفون...', 'calibrating');
+    setTimerStyle('calibrating');
+    timerEl.textContent = '...';
+
+    if (!isNativeAvailable()) {
+      showPermissionError(
+        'هذا التطبيق يعمل فقط داخل تطبيق أندرويد المخصص',
+        'لا يمكن تشغيله مباشرة في المتصفح. اتبع تعليمات البناء لتثبيت الـ APK.'
+      );
+      resetButtonState();
+      return;
+    }
+
+    MicAudio = window.Capacitor.Plugins.MicAudio;
+
+    let permResult;
+    try {
+      permResult = await MicAudio.requestPermission();
+    } catch (err) {
+      showPermissionError('خطأ في طلب الصلاحية', err.message || String(err));
+      resetButtonState();
+      return;
+    }
+
+    if (!permResult.granted) {
+      showPermissionError(
+        'تم رفض إذن الميكروفون',
+        'افتح إعدادات الهاتف ← التطبيقات ← Shot Timer ← الصلاحيات ← الميكروفون، فعّلها ثم أعد المحاولة.'
+      );
+      resetButtonState();
+      return;
+    }
+
+    let startResult;
+    try {
+      startResult = await MicAudio.start();
+    } catch (err) {
+      showPermissionError('تعذّر تشغيل الميكروفون', err.message || String(err));
+      resetButtonState();
+      return;
+    }
+
+    if (sourceInfoEl && startResult) {
+      sourceInfoEl.textContent = 'audio source: ' + (startResult.source || '?') +
+        ' · ' + (startResult.sampleRate || '?') + ' Hz';
+    }
+
+    try {
+      audioListener = await MicAudio.addListener('audioLevel', onAudioSample);
+    } catch (err) {
+      showPermissionError('تعذّر الاستماع لبيانات الصوت', err.message || String(err));
+      await stopAudio();
+      resetButtonState();
+      return;
+    }
+
+    calibrationSamples = [];
+    recentLevels = [];
+    calibrationStart = performance.now();
+    phase = 'calibrating';
+    setStatus('جاري قياس ضجيج الغرفة...', 'calibrating');
+    setTimerStyle('calibrating');
+    startBtn.textContent = '...المعايرة';
+  }
+
+  function showPermissionError(title, detail) {
+    errorEl.innerHTML = '';
+    const strong = document.createElement('strong');
+    strong.textContent = title;
+    errorEl.appendChild(strong);
+    if (detail) errorEl.appendChild(document.createTextNode(detail));
+    errorEl.classList.add('visible');
+  }
+
+  function showError(msg) {
+    if (!msg) {
+      errorEl.classList.remove('visible');
+      errorEl.innerHTML = '';
+    } else {
+      errorEl.innerHTML = '';
+      errorEl.textContent = msg;
+      errorEl.classList.add('visible');
+    }
+  }
+
+  function resetButtonState() {
+    startBtn.disabled = false;
+    startBtn.textContent = 'ابدأ';
+    setStatus('اختر النوع واضغط ابدأ');
+    setTimerStyle(null);
+    timerEl.textContent = '0.000';
+    setModeSelectorEnabled(true);
+  }
+
+  async function resetAll() {
+    phase = 'idle';
+    if (timerRafId) cancelAnimationFrame(timerRafId);
+    await stopAudio();
+    calibrationSamples = [];
+    recentLevels = [];
+    timerEl.textContent = '0.000';
+    setTimerStyle(null);
+    setStatus('اختر النوع واضغط ابدأ');
+    startBtn.disabled = false;
+    startBtn.textContent = 'ابدأ';
+    setModeSelectorEnabled(true);
+    showError('');
+    if (sourceInfoEl) sourceInfoEl.textContent = '';
+  }
+
+  function saveResult(ms, mode) {
+    const history = loadHistory();
+    history.unshift({ ms: Math.round(ms), mode, at: Date.now() });
+    const trimmed = history.slice(0, HISTORY_LIMIT);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+    } catch (e) {}
+  }
+
+  function loadHistory() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function renderHistory() {
+    const history = loadHistory();
+    historyEl.innerHTML = '';
+    if (history.length === 0) {
+      const li = document.createElement('li');
+      li.className = 'empty';
+      li.textContent = 'لا توجد محاولات بعد';
+      historyEl.appendChild(li);
+      return;
+    }
+    history.forEach((entry, i) => {
+      const li = document.createElement('li');
+      const idx = document.createElement('span');
+      idx.className = 'idx';
+      const modeLabel = entry.mode && MODES[entry.mode] ? MODES[entry.mode].label : '';
+      idx.textContent = '#' + (i + 1) + (modeLabel ? ' · ' + modeLabel : '');
+      const ms = document.createElement('span');
+      ms.className = 'ms';
+      ms.textContent = (entry.ms / 1000).toFixed(3) + ' s';
+      li.appendChild(idx);
+      li.appendChild(ms);
+      historyEl.appendChild(li);
+    });
+  }
+
+  startBtn.addEventListener('click', startSession);
+  resetBtn.addEventListener('click', resetAll);
+
+  renderHistory();
+})();
+</script>
+</body>
+</html>
